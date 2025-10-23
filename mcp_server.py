@@ -1,46 +1,55 @@
 
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 import google.generativeai as genai
 
 class PlaywrightController:
     def __init__(self):
-        self.playwright = sync_playwright().start()
-        self.browser = self.playwright.chromium.launch(headless=True)
-        self.page = self.browser.new_page()
+        self.playwright = None
+        self.browser = None
+        self.page = None
 
-    def stop(self):
-        self.browser.close()
-        self.playwright.stop()
+    async def start(self):
+        self.playwright = await async_playwright().start()
+        self.browser = await self.playwright.chromium.launch(headless=True)
+        self.page = await self.browser.new_page()
 
-    def navigate(self, url):
-        self.page.goto(url)
+    async def stop(self):
+        if self.page:
+            await self.page.close()
+        if self.browser:
+            await self.browser.close()
+        if self.playwright:
+            await self.playwright.stop()
 
-    def click(self, element_id):
+    async def navigate(self, url):
+        await self.page.goto(url)
+
+    async def click(self, element_id):
         element = self.page.locator(f"[data-playwright-id='{element_id}']")
-        element.click()
+        await element.click()
 
-    def type_text(self, element_id, text):
+    async def type_text(self, element_id, text):
         element = self.page.locator(f"[data-playwright-id='{element_id}']")
-        element.fill(text)
+        await element.fill(text)
 
-    def get_page_snapshot(self):
-        self.page.wait_for_load_state("networkidle")
+    async def get_page_snapshot(self):
+        await self.page.wait_for_load_state("networkidle")
 
-        interactive_elements = self.page.query_selector_all(
+        interactive_elements = await self.page.query_selector_all(
             "a, button, input, textarea, select"
         )
 
         snapshot = []
         for i, element in enumerate(interactive_elements):
             element_id = f"element-{i}"
-            element.evaluate(f"(element) => element.setAttribute('data-playwright-id', '{element_id}')")
+            await element.evaluate(f"(element) => element.setAttribute('data-playwright-id', '{element_id}')")
 
-            if not element.is_visible():
+            if not await element.is_visible():
                 continue
 
-            tag_name = element.get_attribute("tagName")
-            text = element.text_content()
-            attrs = element.evaluate("(element) => Array.from(element.attributes).reduce((obj, attr) => { obj[attr.name] = attr.value; return obj; }, {})")
+            tag_name = await element.get_attribute("tagName")
+            text = await element.text_content()
+            attrs = await element.evaluate("(element) => Array.from(element.attributes).reduce((obj, attr) => { obj[attr.name] = attr.value; return obj; }, {})")
 
             snapshot.append({
                 "id": element_id,
