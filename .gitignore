@@ -3,3 +3,6 @@ streamlit_output.log
 
 # Playwright
 screenshot.png
+
+# Python
+__pycache__/
